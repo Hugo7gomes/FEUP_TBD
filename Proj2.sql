@@ -284,9 +284,12 @@ SELECT e.employee_id,
        (SELECT REF(J) FROM Jobs J WHERE J.job_id = e.job_id),
        e.salary,
        e.commission_pct,
-       (SELECT REF(Managers) FROM Employees Managers WHERE Managers.employee_id = e.manager_id),
+       NULL,
        (SELECT REF(D) FROM Departments D WHERE D.department_id = e.department_id)
 FROM Employees_Orig e;
+
+UPDATE Employees e
+set e.Manager = (Select ref(Manager) From Employees Manager Where Manager.Employee_Id = (Select manager_id from Employees_Orig Where Employees_Orig.Employee_id = e.Employee_id));
 
 -- Populating Job_History Table
 delete from Job_History;
@@ -342,6 +345,97 @@ cast(multiset(select ref(l) from Locations l where c.country_id = l.country.coun
 update Regions r
 set r.Countries = 
 cast(multiset(select ref(c) from Countries c where r.region_id = c.region.region_id) as Countries_ref_table_t);
+
+
+--------------------------------
+---- Add Functions to types ----
+--------------------------------
+
+ALTER TYPE Employee_t
+    ADD MEMBER FUNCTION GetMaxSalary(d REF Department_t) RETURN FLOAT CASCADE;
+
+ALTER TYPE Employee_t
+    ADD MEMBER FUNCTION GetNumberOfEmployees(d REF Department_t) RETURN INT CASCADE;
+
+ALTER TYPE Employee_t
+    ADD MEMBER FUNCTION GetAverageSalary(d REF Department_t) RETURN NUMBER CASCADE;
+
+ALTER TYPE Employee_t
+    ADD MEMBER FUNCTION GetAverageSalary(d REF Department_t, j REF Job_t) RETURN NUMBER CASCADE;
+
+ALTER TYPE Country_t
+    ADD MEMBER FUNCTION GetNumberOfEmployees(c REF Country_t) RETURN INT CASCADE;
+
+ALTER TYPE Country_t
+    ADD MEMBER FUNCTION GetAverageSalary(c REF Country_t) RETURN NUMBER CASCADE;
+
+
+-------------------------------
+---------- Functions ----------
+-------------------------------
+
+CREATE OR REPLACE TYPE BODY Employee_t AS
+    MEMBER FUNCTION GetMaxSalary(d REF Department_t) RETURN FLOAT IS
+        max_salary FLOAT;
+    BEGIN
+        SELECT MAX(e.salary) INTO max_salary FROM Employees e WHERE e.department = d;
+        RETURN max_salary;
+    END GetMaxSalary;
+
+    MEMBER FUNCTION GetNumberOfEmployees(d REF Department_t) RETURN INT IS
+        num_employees INT;
+    BEGIN
+        SELECT COUNT(*) INTO num_employees FROM Employees e WHERE e.department = d;
+        RETURN num_employees;
+    END GetNumberOfEmployees;
+
+    MEMBER FUNCTION GetAverageSalary(d REF Department_t) RETURN NUMBER IS
+        avg_salary NUMBER;
+    BEGIN
+        SELECT AVG(salary) INTO avg_salary FROM Employees e WHERE e.department = d;
+        RETURN avg_salary;
+    END GetAverageSalary;
+
+    MEMBER FUNCTION GetAverageSalary(d REF Department_t, j REF Job_t) RETURN NUMBER IS
+        avg_salary NUMBER;
+    BEGIN
+        SELECT AVG(e.salary) INTO avg_salary FROM Employees e WHERE e.department = d AND e.job = j;
+        RETURN avg_salary;
+    END GetAverageSalary;
+END;
+
+
+CREATE OR REPLACE TYPE BODY Country_t AS
+    MEMBER FUNCTION GetNumberOfEmployees(c REF Country_t) RETURN INT IS
+        num_employees INT;
+    BEGIN
+        SELECT COUNT(*) INTO num_employees FROM Countries c1, table(c1.Locations) l, table(value(l).departments) d, table(value(d).Employees) e
+        WHERE c = ref(c1);
+        RETURN num_employees;
+    END GetNumberOfEmployees;
+
+    MEMBER FUNCTION GetAverageSalary(c REF Country_t) RETURN NUMBER IS
+        avg_salary NUMBER;
+    BEGIN
+        SELECT nvl(AVG(value(e).salary),0) INTO avg_salary FROM Countries c1, table(c1.Locations) l, table(value(l).departments) d, table(value(d).Employees) e
+        WHERE c = ref(c1);
+        RETURN avg_salary;
+    END GetAverageSalary;
+END;
+
+-----------------------------
+---------- Queries ----------
+-----------------------------
+
+-- Query 1
+SELECT d.department_name, e.GetNumberOfEmployees(REF(d)) AS total_employees
+FROM Departments d, Employees e
+WHERE e.department = REF(d);
+
+SELECT DISTINCT e.department.department_name as department_name, e.job.job_title as Job_Title, e.GetNumberOfEmployees(e.department,e.job) as NumberEmployees 
+FROM Employees e;
+
+--ADICIONAR FUNÇAO GETNUMBEREMPLOYEES(DEPARTMENT, JOB)
 
 
 
