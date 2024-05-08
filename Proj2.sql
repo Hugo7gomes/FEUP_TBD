@@ -363,6 +363,9 @@ ALTER TYPE Employee_t
 ALTER TYPE Employee_t
     ADD MEMBER FUNCTION GetAverageSalary(d REF Department_t, j REF Job_t) RETURN NUMBER CASCADE;
 
+ALTER TYPE Employee_t
+    ADD MEMBER FUNCTION GetNumberOfEmployees(d REF Department_t, j REF Job_t) RETURN INT CASCADE;
+
 ALTER TYPE Country_t
     ADD MEMBER FUNCTION GetNumberOfEmployees(c REF Country_t) RETURN INT CASCADE;
 
@@ -402,6 +405,13 @@ CREATE OR REPLACE TYPE BODY Employee_t AS
         SELECT AVG(e.salary) INTO avg_salary FROM Employees e WHERE e.department = d AND e.job = j;
         RETURN avg_salary;
     END GetAverageSalary;
+
+    MEMBER FUNCTION GetNumberOfEmployees(d REF Department_t, j REF Job_t) RETURN INT IS
+        num_employees INT;
+    BEGIN
+        SELECT COUNT(*) INTO num_employees FROM Employees e WHERE e.department = d AND e.job = j;
+        RETURN num_employees;
+    END GetNumberOfEmployees;
 END;
 
 
@@ -432,10 +442,23 @@ SELECT d.department_name, e.GetNumberOfEmployees(REF(d)) AS total_employees
 FROM Departments d, Employees e
 WHERE e.department = REF(d);
 
+-- Query 2
 SELECT DISTINCT e.department.department_name as department_name, e.job.job_title as Job_Title, e.GetNumberOfEmployees(e.department,e.job) as NumberEmployees 
 FROM Employees e;
 
---ADICIONAR FUNÇAO GETNUMBEREMPLOYEES(DEPARTMENT, JOB)
+-- Query 3
+SELECT e.employee_id, e.first_name, e.last_name, e.department.department_name as Department, e.salary
+FROM Employees e
+WHERE e.salary = e.GetMaxSalary(e.department);
+
+-- Query 4
+
+
+-- Query 5
+SELECT c.country_id, c.country_name, round(c.GetAverageSalary(REF(C))) 
+FROM Countries c;
+
+
 
 
 
