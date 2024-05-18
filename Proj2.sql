@@ -476,6 +476,20 @@ FROM (
 SELECT c.country_id, c.country_name, round(c.GetAverageSalary(REF(C))) 
 FROM Countries c;
 
+-- Query 6
+-- Get the average salary of employees within each department located in Seattle
+SELECT DISTINCT l.city,
+        value(d).department_name,
+        round(e.getAverageSalary(d.column_value),2) as Average_Salary
+FROM Locations l,
+table (l.departments) D,
+     Employees e
+WHERE l.city = 'Seattle' and
+e.department = D.column_value
+ORDER BY l.city, value(D).department_name;
+
+    
+
 
 
 
