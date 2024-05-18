@@ -346,6 +346,11 @@ update Regions r
 set r.Countries = 
 cast(multiset(select ref(c) from Countries c where r.region_id = c.region.region_id) as Countries_ref_table_t);
 
+--Populate Job_History nested table in Employees
+update Employees e
+set e.Job_History = 
+cast(multiset(select ref(JH) from Job_History JH where e.employee_id = JH.employee.employee_id) as Job_History_ref_table_t);
+
 
 --------------------------------
 ---- Add Functions to types ----
@@ -452,7 +457,20 @@ FROM Employees e
 WHERE e.salary = e.GetMaxSalary(e.department);
 
 -- Query 4
-
+SELECT R.employee_id
+FROM (
+    SELECT E.employee_id AS employee_id
+    FROM employees E
+    JOIN job_history JH1 ON JH1.employee = REF(E)
+    JOIN job_history JH2 ON JH2.employee = REF(E) 
+                         AND JH2.start_date = JH1.end_date + INTERVAL '1' DAY
+    UNION
+    SELECT employee_id
+    FROM job_history JH
+    JOIN employees E ON JH.employee = REF(E)
+    GROUP BY employee_id
+    HAVING COUNT(*) = 1
+) R;
 
 -- Query 5
 SELECT c.country_id, c.country_name, round(c.GetAverageSalary(REF(C))) 
