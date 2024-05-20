@@ -457,7 +457,10 @@ FROM Employees e
 WHERE e.salary = e.GetMaxSalary(e.department);
 
 -- Query 4
-SELECT R.employee_id
+SELECT 
+    R.employee_id, 
+    E.hire_date,
+    round(CURRENT_DATE - E.hire_date, 2) AS days_since_hire
 FROM (
     SELECT E.employee_id AS employee_id
     FROM employees E
@@ -470,7 +473,9 @@ FROM (
     JOIN employees E ON JH.employee = REF(E)
     GROUP BY employee_id
     HAVING COUNT(*) = 1
-) R;
+) R 
+JOIN employees E ON E.employee_id = R.employee_id
+ORDER BY days_since_hire;
 
 -- Query 5
 SELECT c.country_id, c.country_name, round(c.GetAverageSalary(REF(C))) 
